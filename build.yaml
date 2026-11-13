@@ -1,0 +1,18 @@
+---
+name: "Next Up Mini"
+guid: "c700d2b1-f78b-4b75-90a6-ce74245ac3fb"
+version: "1.0.1.0"
+targetAbi: "12.0.0.0"
+framework: "net10.0"
+overview: "Shrinks end credits into a corner and counts down to the next episode"
+description: >
+  When an episode's end credits start, the Jellyfin web player shrinks the credits
+  into a corner and shows the next episode with a countdown, Play now and Watch
+  credits buttons. Uses credits markers from media segments (for example Intro
+  Skipper), chapters named "Credits", or a fixed time before the end.
+category: "General"
+owner: "anwafor3"
+artifacts:
+  - "Jellyfin.Plugin.NextUpMini.dll"
+changelog: >
+  Fix: the Play now and Watch credits buttons paused the video instead of working. The buttons now sit above the player controls.

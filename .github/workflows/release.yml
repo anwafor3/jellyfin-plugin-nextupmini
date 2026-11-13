@@ -1,0 +1,57 @@
+# Push a tag like v1.0.0.0 to build the plugin, publish a GitHub release with the zip,
+# and add the release to manifest.json on main so Jellyfin servers can install it.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Read the version from the tag
+        id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: >
+          dotnet publish Jellyfin.Plugin.NextUpMini/Jellyfin.Plugin.NextUpMini.csproj -c Release -o out
+          -p:Version=${{ steps.v.outputs.version }}
+          -p:AssemblyVersion=${{ steps.v.outputs.version }}
+          -p:FileVersion=${{ steps.v.outputs.version }}
+
+      - name: Package
+        run: |
+          mkdir pkg
+          cp out/Jellyfin.Plugin.NextUpMini.dll pkg/
+          (cd pkg && zip -9 "../next-up-mini_${{ steps.v.outputs.version }}.zip" ./*)
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" "next-up-mini_${{ steps.v.outputs.version }}.zip"
+          --title "Next Up Mini ${{ steps.v.outputs.version }}" --generate-notes
+
+      - name: Add the release to manifest.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          python3 scripts/update_manifest.py "${{ steps.v.outputs.version }}" \
+            "next-up-mini_${{ steps.v.outputs.version }}.zip" "$GITHUB_REPOSITORY"
+          git add manifest.json
+          git commit -m "Add ${{ steps.v.outputs.version }} to manifest"
+          git push origin main

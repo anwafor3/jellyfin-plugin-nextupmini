@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Next Up Mini</title>
+</head>
+<body>
+    <div id="NextUpMiniConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <h2 class="sectionTitle">Next Up Mini</h2>
+                <p>When an episode's end credits start, the web player shrinks the credits into a corner and counts down to the next episode.
+                   Changes apply the next time the web player is loaded (refresh the page).</p>
+
+                <form id="NextUpMiniConfigForm">
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="Enabled" type="checkbox" is="emby-checkbox" />
+                            <span>Enable Next Up Mini</span>
+                        </label>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="CountdownSeconds">Countdown (seconds)</label>
+                        <input id="CountdownSeconds" type="number" is="emby-input" min="3" max="60" />
+                        <div class="fieldDescription">How long the countdown runs before the next episode starts (3–60).</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="FallbackSeconds">Fallback (seconds before the end)</label>
+                        <input id="FallbackSeconds" type="number" is="emby-input" min="0" max="300" />
+                        <div class="fieldDescription">Used when an episode has no credits marker. 0 turns the fallback off.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="UseChapterMarkers" type="checkbox" is="emby-checkbox" />
+                            <span>Use chapters named "Credits" as credits markers</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">Media segments (for example from Intro Skipper) are always used first.</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="MiniPlayerWidthPercent">Mini player width (% of screen)</label>
+                        <input id="MiniPlayerWidthPercent" type="number" is="emby-input" min="15" max="45" />
+                    </div>
+
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="Corner">Mini player corner</label>
+                        <select is="emby-select" id="Corner" class="emby-select-withcolor emby-select">
+                            <option value="BottomRight">Bottom right</option>
+                            <option value="BottomLeft">Bottom left</option>
+                        </select>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="HideBuiltInUpNext" type="checkbox" is="emby-checkbox" />
+                            <span>Hide Jellyfin's own "Next Episode" card while the overlay shows</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            (function () {
+                var pluginId = 'c700d2b1-f78b-4b75-90a6-ce74245ac3fb';
+                var page = document.querySelector('#NextUpMiniConfigPage');
+                var numbers = ['CountdownSeconds', 'FallbackSeconds', 'MiniPlayerWidthPercent'];
+                var checks = ['Enabled', 'UseChapterMarkers', 'HideBuiltInUpNext'];
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        numbers.forEach(function (id) { page.querySelector('#' + id).value = config[id]; });
+                        checks.forEach(function (id) { page.querySelector('#' + id).checked = !!config[id]; });
+                        page.querySelector('#Corner').value = config.Corner || 'BottomRight';
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+                page.querySelector('#NextUpMiniConfigForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        numbers.forEach(function (id) { config[id] = parseInt(page.querySelector('#' + id).value, 10) || 0; });
+                        checks.forEach(function (id) { config[id] = page.querySelector('#' + id).checked; });
+                        config.Corner = page.querySelector('#Corner').value;
+                        ApiClient.updatePluginConfiguration(pluginId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+                    return false;
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
