@@ -8,6 +8,8 @@ corner and shows what's up next: the next episode's title and artwork, a countdo
 - Pausing pauses the countdown. Seeking back before the credits closes the overlay.
 - Jellyfin's own small "Next Episode" card is hidden while the overlay shows (optional).
 
+> **AI disclosure:** Next Up Mini was written mostly with an AI assistant (Claude, by Anthropic). I've tested it on my own Jellyfin 12.4 server and use it every day. Bug reports and pull requests are welcome through [GitHub Issues](https://github.com/anwafor3/jellyfin-plugin-nextupmini/issues).
+
 ## Where it works
 
 Next Up Mini runs inside Jellyfin's web player, so it works anywhere that player is used:
