@@ -9,6 +9,14 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.1.0.0",
+        "changelog": "See the GitHub release notes.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/anwafor3/jellyfin-plugin-nextupmini/releases/download/v1.1.0.0/next-up-mini_1.1.0.0.zip",
+        "checksum": "9c616ba10246c6552129e9d14d6173c5",
+        "timestamp": "2026-11-13T01:16:30Z"
+      },
+      {
         "version": "1.0.1.0",
         "changelog": "See the GitHub release notes.",
         "targetAbi": "12.0.0.0",
