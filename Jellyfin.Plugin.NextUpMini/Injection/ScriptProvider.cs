@@ -38,6 +38,7 @@ public static class ScriptProvider
             countdown = Math.Clamp(config.CountdownSeconds, 3, 60),
             fallback = Math.Clamp(config.FallbackSeconds, 0, 300),
             chapters = config.UseChapterMarkers,
+            postCredits = config.DetectPostCreditsScenes,
             width = Math.Clamp(config.MiniPlayerWidthPercent, 15, 45),
             corner = string.Equals(config.Corner, "BottomLeft", StringComparison.OrdinalIgnoreCase) ? "left" : "right",
             hideBuiltIn = config.HideBuiltInUpNext

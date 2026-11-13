@@ -22,6 +22,13 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets a value indicating whether chapters named like "Credits" count as a credits marker.</summary>
     public bool UseChapterMarkers { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a gap between the end of the credits marker and the end
+    /// of the episode is treated as a scene after the credits (no countdown, "Skip to scene" button).
+    /// Off by default: it relies on credits markers that cover the whole credits.
+    /// </summary>
+    public bool DetectPostCreditsScenes { get; set; }
+
     /// <summary>Gets or sets the mini player's width as a percentage of the screen width.</summary>
     public int MiniPlayerWidthPercent { get; set; } = 28;
 

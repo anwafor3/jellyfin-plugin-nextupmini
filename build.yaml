@@ -1,7 +1,7 @@
 ---
 name: "Next Up Mini"
 guid: "c700d2b1-f78b-4b75-90a6-ce74245ac3fb"
-version: "1.0.1.0"
+version: "1.1.0.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Shrinks end credits into a corner and counts down to the next episode"
@@ -15,4 +15,8 @@ owner: "anwafor3"
 artifacts:
   - "Jellyfin.Plugin.NextUpMini.dll"
 changelog: >
-  Fix: the Play now and Watch credits buttons paused the video instead of working. The buttons now sit above the player controls.
+  Series finale: says you have finished the series and offers to go back to it. Respects the user
+  setting "Play next episode automatically". Shows when the next episode starts a new season. Optional
+  (off by default) detection of scenes after the credits, with a Skip to scene button. Fixes the
+  overlay not appearing when the same episode is started again, and the wrong episode being
+  detected when two tabs in the same browser are playing.

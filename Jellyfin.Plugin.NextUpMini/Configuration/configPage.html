@@ -40,6 +40,14 @@
                         <div class="fieldDescription checkboxFieldDescription">Media segments (for example from Intro Skipper) are always used first.</div>
                     </div>
 
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="DetectPostCreditsScenes" type="checkbox" is="emby-checkbox" />
+                            <span>Detect scenes after the credits</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">When the credits marker ends well before the episode does, show "Skip to scene" instead of a countdown. Only turn this on if your credits markers cover the whole credits; partial markers or "next episode" previews cause false alarms.</div>
+                    </div>
+
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="MiniPlayerWidthPercent">Mini player width (% of screen)</label>
                         <input id="MiniPlayerWidthPercent" type="number" is="emby-input" min="15" max="45" />
@@ -74,7 +82,7 @@
                 var pluginId = 'c700d2b1-f78b-4b75-90a6-ce74245ac3fb';
                 var page = document.querySelector('#NextUpMiniConfigPage');
                 var numbers = ['CountdownSeconds', 'FallbackSeconds', 'MiniPlayerWidthPercent'];
-                var checks = ['Enabled', 'UseChapterMarkers', 'HideBuiltInUpNext'];
+                var checks = ['Enabled', 'UseChapterMarkers', 'DetectPostCreditsScenes', 'HideBuiltInUpNext'];
 
                 page.addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();

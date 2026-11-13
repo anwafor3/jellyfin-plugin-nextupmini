@@ -4,9 +4,16 @@ When an episode's end credits start, the Jellyfin **web player** shrinks the cre
 corner and shows what's up next: the next episode's title and artwork, a countdown ring, and
 **Play now** / **Watch credits** buttons. When the countdown ends, the next episode starts.
 
-- **Enter** plays the next episode now. **Esc** keeps watching the credits at full size.
+- **Enter** presses the main (white) button. **Esc** keeps watching the credits at full size.
 - Pausing pauses the countdown. Seeking back before the credits closes the overlay.
 - Jellyfin's own small "Next Episode" card is hidden while the overlay shows (optional).
+- **Scenes after the credits** (optional, off by default): if the credits marker ends well before the
+  episode does, there's no countdown; instead you get **Skip to scene** (or keep watching, and the scene
+  plays full size when the credits end). Only useful if your credits markers cover the whole credits.
+- **Series finale:** on the last episode in your library it says you've finished the series and offers
+  **Back to series**.
+- If a user has turned off **Play next episode automatically** in their Jellyfin settings, the overlay
+  shows without a countdown, so nothing starts on its own.
 
 > **AI disclosure:** Next Up Mini was written mostly with an AI assistant (Claude, by Anthropic). I've tested it on my own Jellyfin 12.4 server and use it every day. Bug reports and pull requests are welcome through [GitHub Issues](https://github.com/anwafor3/jellyfin-plugin-nextupmini/issues).
 
@@ -50,6 +57,7 @@ Next Up Mini runs inside Jellyfin's web player, so it works anywhere that player
 | Countdown | 10 s | 3–60 seconds |
 | Fallback | 30 s | Seconds before the end when there's no credits marker; 0 turns it off |
 | Use chapters named "Credits" | On | Checked after media segments |
+| Detect scenes after the credits | Off | Needs credits markers that cover the whole credits |
 | Mini player width | 28 % | 15–45 % of the screen width |
 | Corner | Bottom right | Or bottom left |
 | Hide Jellyfin's "Next Episode" card | On | |
