@@ -14,6 +14,10 @@ corner and shows what's up next: the next episode's title and artwork, a countdo
   **Back to series**.
 - If a user has turned off **Play next episode automatically** in their Jellyfin settings, the overlay
   shows without a countdown, so nothing starts on its own.
+- **Cast when paused** (a simple take on Prime Video's X-Ray): pause for a moment and a panel in the bottom-right corner shows the
+  episode or movie, a short summary and its cast with photos and character names. Pick an actor to see
+  what else they're in from your library. It uses the cast Jellyfin already has, so it lists everyone in
+  the episode, not just who's on screen. **Esc** or pressing play closes it.
 
 > **AI disclosure:** Next Up Mini was written mostly with an AI assistant (Claude, by Anthropic). I've tested it on my own Jellyfin 12.4 server and use it every day. Bug reports and pull requests are welcome through [GitHub Issues](https://github.com/anwafor3/jellyfin-plugin-nextupmini/issues).
 
@@ -61,6 +65,7 @@ Next Up Mini runs inside Jellyfin's web player, so it works anywhere that player
 | Mini player width | 28 % | 15–45 % of the screen width |
 | Corner | Bottom right | Or bottom left |
 | Hide Jellyfin's "Next Episode" card | On | |
+| Show cast and info when paused | On | |
 
 Changes apply the next time the web player loads.
 

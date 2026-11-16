@@ -37,4 +37,10 @@ public class PluginConfiguration : BasePluginConfiguration
 
     /// <summary>Gets or sets a value indicating whether Jellyfin's own "Next Episode" card is hidden while the overlay shows.</summary>
     public bool HideBuiltInUpNext { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether pausing shows a panel with the episode or movie and its cast,
+    /// where picking an actor lists what else they're in from the library.
+    /// </summary>
+    public bool ShowCastOnPause { get; set; } = true;
 }

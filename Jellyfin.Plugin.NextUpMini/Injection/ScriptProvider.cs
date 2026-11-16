@@ -41,7 +41,8 @@ public static class ScriptProvider
             postCredits = config.DetectPostCreditsScenes,
             width = Math.Clamp(config.MiniPlayerWidthPercent, 15, 45),
             corner = string.Equals(config.Corner, "BottomLeft", StringComparison.OrdinalIgnoreCase) ? "left" : "right",
-            hideBuiltIn = config.HideBuiltInUpNext
+            hideBuiltIn = config.HideBuiltInUpNext,
+            pauseInfo = config.ShowCastOnPause
         };
 
         return Template.Value.Replace(ConfigPlaceholder, JsonSerializer.Serialize(settings), StringComparison.Ordinal);

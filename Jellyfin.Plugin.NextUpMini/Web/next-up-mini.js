@@ -6,7 +6,9 @@
    - Optional (off by default): if the credits end well before the episode does, treat it as a
      scene after the credits: no countdown, and a "Skip to scene" button instead.
    - On the last episode of a series, it says so and offers to go back to the series.
-   - If the user turned off "Play next episode automatically", there is no countdown. */
+   - If the user turned off "Play next episode automatically", there is no countdown.
+   - When paused, a panel shows the episode or movie and its cast; picking an actor lists what
+     else they're in from your library (optional, on by default). */
 (function () {
   'use strict';
   if (window.__nextUpMini) return;
@@ -15,7 +17,7 @@
   // Settings are filled in by the server from the plugin's Dashboard page.
   var CFG = Object.assign({
     enabled: true, countdown: 10, fallback: 30, chapters: true, postCredits: false,
-    width: 28, corner: 'right', hideBuiltIn: true
+    width: 28, corner: 'right', hideBuiltIn: true, pauseInfo: true
   }, /*NUM_CONFIG*/{});
   if (!CFG.enabled) return;
 
@@ -172,6 +174,7 @@
   }
 
   function show(v) {
+    hidePauseInfo();
     st.shown = true; st.video = v; st.left = CFG.countdown;
     var n = st.next;
     var countdown = st.mode === 'next' && st.autoplay;
@@ -203,9 +206,9 @@
     var kicker = o.querySelector('.nm-kicker'), title = o.querySelector('.nm-title'), sub = o.querySelector('.nm-sub');
     var imgId;
     if (n && st.mode !== 'finale') {
-      kicker.textContent = st.newSeason ? 'Up next · Season ' + n.ParentIndexNumber : 'Up next';
+      kicker.textContent = st.newSeason ? 'Up next \u00b7 Season ' + n.ParentIndexNumber : 'Up next';
       title.textContent = n.Name;
-      sub.textContent = 'S' + n.ParentIndexNumber + ':E' + n.IndexNumber + ' · ' + (n.SeriesName || '');
+      sub.textContent = 'S' + n.ParentIndexNumber + ':E' + n.IndexNumber + ' \u00b7 ' + (n.SeriesName || '');
       imgId = n.Id;
     } else {
       kicker.textContent = st.mode === 'stinger' ? 'Last episode' : 'Series complete';
@@ -304,6 +307,121 @@
     setTimeout(hide, 15000);   // safety net if the next episode never loads
   }
 
+  // ---- Cast & info when paused (a simple take on Prime Video's X-Ray) ----
+  // Shows the episode or movie, a short summary and its cast. Picking an actor lists what else
+  // they're in from your library. Uses the cast Jellyfin already has (for example from TMDb);
+  // it doesn't know who is on screen at that moment.
+  var px = { el: null, timer: null, cache: {} };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; });
+  }
+
+  function img(id, tag, height) {
+    return root() + '/Items/' + id + '/Images/Primary?fillHeight=' + height + '&quality=85' +
+           (tag ? '&tag=' + encodeURIComponent(tag) : '');
+  }
+
+  function infoFor(id) {
+    if (px.cache[id]) return Promise.resolve(px.cache[id]);
+    var a = auth();
+    if (!a) return Promise.reject(new Error('not signed in'));
+    return req('GET', 'Items/' + id + '?userId=' + a.user + '&fields=People,Overview').then(function (it) {
+      px.cache[id] = it;
+      return it;
+    });
+  }
+
+  function hidePauseInfo() {
+    clearTimeout(px.timer);
+    if (px.el) {
+      var el = px.el;
+      px.el = null;
+      el.classList.remove('nm-in');
+      setTimeout(function () { el.remove(); }, 300);
+    }
+  }
+
+  function showPauseInfo(v) {
+    var id = own.item || st.id;
+    if (px.el || st.shown || !id || !v.paused || v.ended || !document.contains(v)) return;
+    infoFor(id).then(function (it) {
+      if (px.el || st.shown || !v.paused || (own.item || st.id) !== id) return;
+      var cast = (it.People || []).filter(function (p) { return p.Type === 'Actor' || p.Type === 'GuestStar'; });
+      if (!cast.length && !it.Overview) return;
+      var p = document.createElement('div');
+      p.className = 'nm-px';
+      // Keep clicks inside the panel away from the player, which would otherwise resume playback.
+      ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(function (t) {
+        p.addEventListener(t, function (e) { e.stopPropagation(); });
+      });
+      document.body.appendChild(p);
+      px.el = p;
+      renderCast(p, it, cast);
+      requestAnimationFrame(function () { p.classList.add('nm-in'); });
+    }).catch(function (e) { log('pause info failed', e); });
+  }
+
+  function renderCast(p, it, cast) {
+    var head = it.Type === 'Episode'
+      ? '<div class="nm-px-kicker">' + esc(it.SeriesName) + '</div><div class="nm-px-title">' + esc(it.Name) + '</div>' +
+        '<div class="nm-px-sub">Season ' + esc(it.ParentIndexNumber) + ' \u00b7 Episode ' + esc(it.IndexNumber) + '</div>'
+      : '<div class="nm-px-title">' + esc(it.Name) + '</div>' +
+        (it.ProductionYear ? '<div class="nm-px-sub">' + esc(it.ProductionYear) + '</div>' : '');
+    var people = cast.slice(0, 16).map(function (c, i) {
+      var face = c.PrimaryImageTag
+        ? '<img class="nm-px-face" alt="" data-initial="' + esc((c.Name || '?').charAt(0)) + '" src="' + esc(img(c.Id, c.PrimaryImageTag, 120)) + '">'
+        : '<span class="nm-px-face">' + esc((c.Name || '?').charAt(0)) + '</span>';
+      var role = (c.Role || '') + (c.Type === 'GuestStar' ? (c.Role ? ' \u00b7 ' : '') + 'guest star' : '');
+      return '<button class="nm-px-p" data-i="' + i + '">' + face + '<span><span class="nm-px-name">' + esc(c.Name) +
+             '</span>' + (role ? '<span class="nm-px-role">' + esc(role) + '</span>' : '') + '</span></button>';
+    }).join('');
+    p.innerHTML = head +
+      (it.Overview ? '<p class="nm-px-ov">' + esc(it.Overview) + '</p>' : '') +
+      (people ? '<div class="nm-px-h">Cast</div><div class="nm-px-grid">' + people + '</div>' : '');
+    p.querySelectorAll('img.nm-px-face').forEach(function (f) {
+      f.onerror = function () {
+        f.replaceWith(Object.assign(document.createElement('span'), { className: 'nm-px-face', textContent: f.getAttribute('data-initial') }));
+      };
+    });
+    p.querySelectorAll('.nm-px-p').forEach(function (b) {
+      b.addEventListener('click', function () { renderPerson(p, it, cast, cast[Number(b.getAttribute('data-i'))]); });
+    });
+  }
+
+  // What else this actor is in from your library (titles only, so the episode keeps playing).
+  function renderPerson(p, it, cast, person) {
+    var a = auth();
+    var skip = it.Type === 'Episode' ? it.SeriesId : it.Id;
+    p.innerHTML = '<button class="nm-px-back">\u2039 Back to cast</button>' +
+      '<div class="nm-px-title">' + esc(person.Name) + '</div>' +
+      (person.Role ? '<div class="nm-px-sub">as ' + esc(person.Role) + '</div>' : '') +
+      '<div class="nm-px-h">Also in your library</div><div class="nm-px-list">Loading\u2026</div>';
+    p.querySelector('.nm-px-back').addEventListener('click', function () { renderCast(p, it, cast); });
+    p.scrollTop = 0;
+    req('GET', 'Items?userId=' + a.user + '&personIds=' + person.Id + '&recursive=true' +
+        '&includeItemTypes=Movie,Series&sortBy=ProductionYear,SortName&sortOrder=Descending&limit=24')
+      .then(function (r) {
+        var list = p.querySelector('.nm-px-list');
+        if (!list) return;
+        var items = ((r && r.Items) || []).filter(function (x) { return x.Id !== skip; });
+        list.innerHTML = items.length ? items.map(function (x) {
+          var poster = x.ImageTags && x.ImageTags.Primary
+            ? '<img alt="" src="' + esc(img(x.Id, x.ImageTags.Primary, 120)) + '">' : '<span></span>';
+          return '<div class="nm-px-item">' + poster + '<span><span class="nm-px-name">' + esc(x.Name) + '</span>' +
+                 '<span class="nm-px-role">' + (x.Type === 'Series' ? 'Series' : 'Movie') +
+                 (x.ProductionYear ? ' \u00b7 ' + esc(x.ProductionYear) : '') + '</span></span></div>';
+        }).join('') : '<div class="nm-px-role">Nothing else in your library.</div>';
+        list.querySelectorAll('img').forEach(function (i) {
+          i.onerror = function () { i.replaceWith(document.createElement('span')); };
+        });
+      })
+      .catch(function () {
+        var list = p.querySelector('.nm-px-list');
+        if (list) list.textContent = 'Could not load.';
+      });
+  }
+
   var w = Math.max(15, Math.min(45, Number(CFG.width) || 28));
   var side = CFG.corner === 'left' ? 'left:3vw!important;right:auto!important;' : 'right:3vw!important;left:auto!important;';
   var css = document.createElement('style');
@@ -330,6 +448,22 @@
     '.nm-secondary{background:rgba(255,255,255,.14);color:#fff}',
     '.nm-btn:hover{filter:brightness(.88)}',
     CFG.hideBuiltIn ? 'body:has(.nm-overlay) .upNextDialog{visibility:hidden!important}' : '',
+    '.nm-px{position:fixed;right:1vw;left:auto;top:auto;bottom:1.5vh;width:min(42vw,800px);max-height:44vh;overflow-y:auto;box-sizing:border-box;z-index:2147482000;padding:1.1em 1.4em;border-radius:8px;background:rgba(12,12,16,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);box-shadow:0 10px 32px rgba(0,0,0,.35);opacity:0;transform:translateY(14px);transition:opacity .3s ease,transform .3s ease}',
+    '.nm-px.nm-in{opacity:1;transform:none}',
+    '.nm-px-kicker{font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;color:#00a4dc}',
+    '.nm-px-title{font-size:1.5rem;font-weight:600;line-height:1.2;margin-top:.15em}',
+    '.nm-px-sub{font-size:.95rem;opacity:.65;margin-top:.2em}',
+    '.nm-px-ov{font-size:.92rem;line-height:1.45;opacity:.85;margin:.6em 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+    '.nm-px-h{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin:.9em 0 .4em}',
+    '.nm-px-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:.2em .5em}',
+    '.nm-px-p,.nm-px-item{display:flex;align-items:center;gap:.65em;padding:.35em;border-radius:8px;text-align:left}',
+    '.nm-px-p{background:none;border:0;color:inherit;font:inherit;cursor:pointer}',
+    '.nm-px-p:hover,.nm-px-p:focus-visible{background:rgba(255,255,255,.1);outline:none}',
+    '.nm-px-face{width:44px;height:44px;flex:none;border-radius:50%;object-fit:cover;background:#3a3a44;display:flex;align-items:center;justify-content:center;font-weight:600}',
+    '.nm-px-name{display:block;font-size:.9rem;font-weight:600;line-height:1.25}',
+    '.nm-px-role{display:block;font-size:.8rem;opacity:.6;line-height:1.25}',
+    '.nm-px-item img,.nm-px-item>span:first-child:empty{width:36px;height:54px;flex:none;border-radius:4px;object-fit:cover;background:#3a3a44}',
+    '.nm-px-back{background:none;border:0;color:#00a4dc;font:inherit;font-size:.9rem;padding:0 0 .6em;cursor:pointer}',
     'video.nm-mini{position:absolute!important;top:auto!important;' + side + 'bottom:5vh!important;width:' + w + 'vw!important;height:' + (w * 9 / 16).toFixed(2) + 'vw!important;z-index:6!important;background:#000;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.75);transition:all .45s ease}'
   ].join('\n');
   document.head.appendChild(css);
@@ -359,6 +493,23 @@
     if (!st.shown && !st.done && pos >= at && (!st.end || pos < st.end - 2)) show(v);
     else if (st.shown && !st.starting && pos < at - 3) hide();   // seeked back before the credits
   }, true);
+  if (CFG.pauseInfo) {
+    // Show the panel a moment after the user pauses in the full-screen player (not for quick pauses,
+    // and not for background or trailer videos elsewhere in the web app).
+    document.addEventListener('pause', function (e) {
+      var v = e.target;
+      if (!(v instanceof HTMLVideoElement) || location.hash.indexOf('#/video') !== 0) return;
+      clearTimeout(px.timer);
+      px.timer = setTimeout(function () { showPauseInfo(v); }, 1200);
+    }, true);
+    ['play', 'playing', 'loadstart', 'emptied'].forEach(function (t) {
+      document.addEventListener(t, function (e) { if (e.target instanceof HTMLVideoElement) hidePauseInfo(); }, true);
+    });
+    window.addEventListener('hashchange', hidePauseInfo);
+    document.addEventListener('keydown', function (e) {
+      if (px.el && e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); hidePauseInfo(); }
+    }, true);
+  }
   document.addEventListener('keydown', function (e) {
     if (!st.shown) return;
     if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); primaryAction(); }

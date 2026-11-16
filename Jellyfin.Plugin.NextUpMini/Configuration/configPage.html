@@ -10,6 +10,7 @@
             <div class="content-primary">
                 <h2 class="sectionTitle">Next Up Mini</h2>
                 <p>When an episode's end credits start, the web player shrinks the credits into a corner and counts down to the next episode.
+                   When you pause, it can also show the cast.
                    Changes apply the next time the web player is loaded (refresh the page).</p>
 
                 <form id="NextUpMiniConfigForm">
@@ -68,6 +69,14 @@
                         </label>
                     </div>
 
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="ShowCastOnPause" type="checkbox" is="emby-checkbox" />
+                            <span>Show cast and info when paused</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">When you pause, a panel shows the episode or movie, a short summary and its cast. Picking an actor lists what else they're in from your library.</div>
+                    </div>
+
                     <div>
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
                             <span>Save</span>
@@ -82,7 +91,7 @@
                 var pluginId = 'c700d2b1-f78b-4b75-90a6-ce74245ac3fb';
                 var page = document.querySelector('#NextUpMiniConfigPage');
                 var numbers = ['CountdownSeconds', 'FallbackSeconds', 'MiniPlayerWidthPercent'];
-                var checks = ['Enabled', 'UseChapterMarkers', 'DetectPostCreditsScenes', 'HideBuiltInUpNext'];
+                var checks = ['Enabled', 'UseChapterMarkers', 'DetectPostCreditsScenes', 'HideBuiltInUpNext', 'ShowCastOnPause'];
 
                 page.addEventListener('pageshow', function () {
                     Dashboard.showLoadingMsg();

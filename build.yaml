@@ -1,7 +1,7 @@
 ---
 name: "Next Up Mini"
 guid: "c700d2b1-f78b-4b75-90a6-ce74245ac3fb"
-version: "1.1.0.0"
+version: "1.2.0.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Shrinks end credits into a corner and counts down to the next episode"
@@ -9,14 +9,13 @@ description: >
   When an episode's end credits start, the Jellyfin web player shrinks the credits
   into a corner and shows the next episode with a countdown, Play now and Watch
   credits buttons. Uses credits markers from media segments (for example Intro
-  Skipper), chapters named "Credits", or a fixed time before the end.
+  Skipper), chapters named "Credits", or a fixed time before the end. When you pause, it can
+  also show the episode or movie, a short summary and its cast.
 category: "General"
 owner: "anwafor3"
 artifacts:
   - "Jellyfin.Plugin.NextUpMini.dll"
 changelog: >
-  Series finale: says you have finished the series and offers to go back to it. Respects the user
-  setting "Play next episode automatically". Shows when the next episode starts a new season. Optional
-  (off by default) detection of scenes after the credits, with a Skip to scene button. Fixes the
-  overlay not appearing when the same episode is started again, and the wrong episode being
-  detected when two tabs in the same browser are playing.
+  Cast and info when paused: a panel shows the episode or movie, a short summary and its cast;
+  picking an actor lists what else they're in from your library. On by default, with a setting
+  to turn it off.
