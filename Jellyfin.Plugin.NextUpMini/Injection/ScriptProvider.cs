@@ -42,7 +42,8 @@ public static class ScriptProvider
             width = Math.Clamp(config.MiniPlayerWidthPercent, 15, 45),
             corner = string.Equals(config.Corner, "BottomLeft", StringComparison.OrdinalIgnoreCase) ? "left" : "right",
             hideBuiltIn = config.HideBuiltInUpNext,
-            pauseInfo = config.ShowCastOnPause
+            pauseInfo = config.ShowCastOnPause,
+            sleep = config.ShowSleepTimer
         };
 
         return Template.Value.Replace(ConfigPlaceholder, JsonSerializer.Serialize(settings), StringComparison.Ordinal);

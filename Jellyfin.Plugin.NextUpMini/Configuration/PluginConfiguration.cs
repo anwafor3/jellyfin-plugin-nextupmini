@@ -43,4 +43,10 @@ public class PluginConfiguration : BasePluginConfiguration
     /// where picking an actor lists what else they're in from the library.
     /// </summary>
     public bool ShowCastOnPause { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the player shows a sleep timer button that pauses playback
+    /// after a set time or at the end of the episode.
+    /// </summary>
+    public bool ShowSleepTimer { get; set; } = true;
 }

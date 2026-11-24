@@ -14,6 +14,9 @@ corner and shows what's up next: the next episode's title and artwork, a countdo
   **Back to series**.
 - If a user has turned off **Play next episode automatically** in their Jellyfin settings, the overlay
   shows without a countdown, so nothing starts on its own.
+- **Sleep timer:** a moon button in the player controls. Pause after 15, 30 or 45 minutes, 1, 1.5 or 2 hours,
+  or at the end of the episode. A minute before it pauses you get a warning with **+15 min** and **Cancel**.
+  The timer carries on into the next episode and is cleared when you leave the player.
 - **Cast when paused** (a simple take on Prime Video's X-Ray): pause for a moment and a panel in the bottom-right corner shows the
   episode or movie, a short summary and its cast with photos and character names. Pick an actor to see
   what else they're in from your library. It uses the cast Jellyfin already has, so it lists everyone in
@@ -66,6 +69,7 @@ Next Up Mini runs inside Jellyfin's web player, so it works anywhere that player
 | Corner | Bottom right | Or bottom left |
 | Hide Jellyfin's "Next Episode" card | On | |
 | Show cast and info when paused | On | |
+| Show a sleep timer in the player | On | |
 
 Changes apply the next time the web player loads.
 

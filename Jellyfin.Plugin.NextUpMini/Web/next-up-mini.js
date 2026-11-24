@@ -7,6 +7,8 @@
      scene after the credits: no countdown, and a "Skip to scene" button instead.
    - On the last episode of a series, it says so and offers to go back to the series.
    - If the user turned off "Play next episode automatically", there is no countdown.
+   - Sleep timer (moon button in the player controls): pause after a set time or at the end of
+     the episode (optional, on by default).
    - When paused, a panel shows the episode or movie and its cast; picking an actor lists what
      else they're in from your library (optional, on by default). */
 (function () {
@@ -17,7 +19,7 @@
   // Settings are filled in by the server from the plugin's Dashboard page.
   var CFG = Object.assign({
     enabled: true, countdown: 10, fallback: 30, chapters: true, postCredits: false,
-    width: 28, corner: 'right', hideBuiltIn: true, pauseInfo: true
+    width: 28, corner: 'right', hideBuiltIn: true, pauseInfo: true, sleep: true
   }, /*NUM_CONFIG*/{});
   if (!CFG.enabled) return;
 
@@ -422,6 +424,141 @@
       });
   }
 
+
+  // ---- Sleep timer ----
+  // A moon button in the player controls. Pauses playback after a set time, or when the current
+  // episode's credits start. The timer carries over when the next episode starts on its own and
+  // is cleared when you leave the player.
+  var sleep = { mode: null, until: 0, warned: false, timer: null, menu: null, toast: null };
+  var MOON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
+  function onPlayer() { return location.hash.indexOf('#/video') === 0; }
+
+  function fmtLeft(ms) {
+    var m = Math.ceil(ms / 60000);
+    return m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? String(m % 60).padStart(2, '0') : '') : m + 'm';
+  }
+
+  function sleepLabel() {
+    if (sleep.mode === 'episode') return 'Ep';
+    if (sleep.mode === 'time') return fmtLeft(sleep.until - Date.now());
+    return '';
+  }
+
+  function updateSleepButtons() {
+    document.querySelectorAll('.nm-sleep-btn').forEach(function (b) {
+      var l = b.querySelector('.nm-sleep-left');
+      if (l) l.textContent = sleepLabel();
+      b.classList.toggle('nm-sleep-on', !!sleep.mode);
+      b.title = sleep.mode ? 'Sleep timer: ' + (sleep.mode === 'episode' ? 'end of episode' : sleepLabel() + ' left') : 'Sleep timer';
+    });
+  }
+
+  function toast(html, buttons, keep) {
+    if (sleep.toast) sleep.toast.remove();
+    var t = document.createElement('div');
+    t.className = 'nm-toast';
+    t.innerHTML = '<span>' + html + '</span>' + (buttons || []).map(function (b, i) {
+      return '<button data-i="' + i + '">' + esc(b[0]) + '</button>';
+    }).join('');
+    ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'dblclick'].forEach(function (ev) {
+      t.addEventListener(ev, function (e) { e.stopPropagation(); });
+    });
+    t.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () { buttons[Number(b.getAttribute('data-i'))][1](); t.remove(); });
+    });
+    document.body.appendChild(t);
+    sleep.toast = t;
+    requestAnimationFrame(function () { t.classList.add('nm-in'); });
+    if (!keep) setTimeout(function () { if (sleep.toast === t) { t.remove(); sleep.toast = null; } }, 6000);
+  }
+
+  function setSleep(mode, minutes) {
+    clearInterval(sleep.timer);
+    sleep.mode = mode; sleep.warned = false;
+    sleep.until = mode === 'time' ? Date.now() + minutes * 60000 : 0;
+    if (mode === 'time') sleep.timer = setInterval(sleepTick, 1000);
+    if (sleep.toast) { sleep.toast.remove(); sleep.toast = null; }
+    updateSleepButtons();
+    if (mode === 'time') toast('Sleep timer set: pausing in ' + fmtLeft(minutes * 60000) + '.');
+    else if (mode === 'episode') toast('Sleep timer set: pausing at the end of this episode.');
+    else toast('Sleep timer off.');
+  }
+
+  function sleepNow(v, msg) {
+    clearInterval(sleep.timer);
+    sleep.mode = null;
+    updateSleepButtons();
+    v = v || document.querySelector('video');
+    if (v && !v.paused) v.pause();
+    toast(msg || 'Sleep timer: paused.', [['OK', function () {}]], true);
+  }
+
+  function sleepTick() {
+    if (sleep.mode !== 'time') return;
+    var left = sleep.until - Date.now();
+    updateSleepButtons();
+    if (left <= 0) { sleepNow(null, 'Sleep timer: paused.'); return; }
+    if (left <= 60000 && !sleep.warned) {
+      sleep.warned = true;
+      toast('Pausing in 1 minute.', [
+        ['+15 min', function () { sleep.until += 15 * 60000; sleep.warned = false; updateSleepButtons(); }],
+        ['Cancel timer', function () { setSleep(null); }]
+      ], true);
+    }
+  }
+
+  function closeSleepMenu() { if (sleep.menu) { sleep.menu.remove(); sleep.menu = null; } }
+
+  function openSleepMenu(btn) {
+    if (sleep.menu) { closeSleepMenu(); return; }
+    var m = document.createElement('div');
+    m.className = 'nm-sleep-menu';
+    var opts = [['End of this episode', 'episode', 0], ['15 minutes', 'time', 15], ['30 minutes', 'time', 30],
+                ['45 minutes', 'time', 45], ['1 hour', 'time', 60], ['1.5 hours', 'time', 90], ['2 hours', 'time', 120]];
+    m.innerHTML = '<div class="nm-sleep-h">Sleep timer' + (sleep.mode ? ' \u00b7 ' + (sleep.mode === 'episode' ? 'end of episode' : sleepLabel() + ' left') : '') + '</div>' +
+      opts.map(function (o, i) { return '<button data-i="' + i + '">' + o[0] + '</button>'; }).join('') +
+      (sleep.mode ? '<button data-off="1" class="nm-sleep-off">Turn off</button>' : '');
+    ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'dblclick'].forEach(function (ev) {
+      m.addEventListener(ev, function (e) { e.stopPropagation(); });
+    });
+    m.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.getAttribute('data-off')) setSleep(null);
+        else { var o = opts[Number(b.getAttribute('data-i'))]; setSleep(o[1], o[2]); }
+        closeSleepMenu();
+      });
+    });
+    document.body.appendChild(m);
+    var r = btn.getBoundingClientRect();
+    if (r.width && r.top > m.offsetHeight + 20) {
+      // Above the moon button.
+      m.style.left = Math.max(8, Math.min(window.innerWidth - m.offsetWidth - 8, r.left + r.width / 2 - m.offsetWidth / 2)) + 'px';
+      m.style.bottom = (window.innerHeight - r.top + 10) + 'px';
+    } else {
+      // The controls are hidden or too close to the top: use the bottom-right corner.
+      m.style.right = '2vw';
+      m.style.bottom = '14vh';
+    }
+    sleep.menu = m;
+  }
+
+  // Add the moon button next to the player's settings button whenever the controls are (re)built.
+  function addSleepButton() {
+    if (!onPlayer()) return;
+    var bar = document.querySelector('.videoOsdBottom .buttons.focuscontainer-x') ||
+              (document.querySelector('.videoOsdBottom .btnVideoOsdSettings') || {}).parentElement;
+    if (!bar || bar.querySelector('.nm-sleep-btn')) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'paper-icon-button-light autoSize nm-sleep-btn';
+    b.innerHTML = MOON + '<span class="nm-sleep-left"></span>';
+    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openSleepMenu(b); });
+    var before = bar.querySelector('.btnVideoOsdSettings');
+    if (before) bar.insertBefore(b, before); else bar.appendChild(b);
+    updateSleepButtons();
+  }
+
   var w = Math.max(15, Math.min(45, Number(CFG.width) || 28));
   var side = CFG.corner === 'left' ? 'left:3vw!important;right:auto!important;' : 'right:3vw!important;left:auto!important;';
   var css = document.createElement('style');
@@ -464,6 +601,18 @@
     '.nm-px-role{display:block;font-size:.8rem;opacity:.6;line-height:1.25}',
     '.nm-px-item img,.nm-px-item>span:first-child:empty{width:36px;height:54px;flex:none;border-radius:4px;object-fit:cover;background:#3a3a44}',
     '.nm-px-back{background:none;border:0;color:#00a4dc;font:inherit;font-size:.9rem;padding:0 0 .6em;cursor:pointer}',
+    '.nm-sleep-btn{display:inline-flex!important;align-items:center;gap:.15em;position:relative}',
+    '.nm-sleep-btn.nm-sleep-on{color:#00a4dc}',
+    '.nm-sleep-left{font-size:.75rem;font-weight:600;min-width:0}',
+    '.nm-sleep-menu{position:fixed;z-index:2147483100;min-width:12em;padding:.5em;border-radius:8px;background:rgba(20,20,26,.96);color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.6);display:flex;flex-direction:column}',
+    '.nm-sleep-h{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;opacity:.65;padding:.35em .6em .5em}',
+    '.nm-sleep-menu button{background:none;border:0;color:inherit;font:inherit;text-align:left;padding:.5em .7em;border-radius:6px;cursor:pointer}',
+    '.nm-sleep-menu button:hover,.nm-sleep-menu button:focus-visible{background:rgba(255,255,255,.12);outline:none}',
+    '.nm-sleep-off{color:#ff8a80!important}',
+    '.nm-toast{position:fixed;left:50%;top:6vh;transform:translate(-50%,-10px);z-index:2147483100;display:flex;align-items:center;gap:.8em;padding:.7em 1em;border-radius:8px;background:rgba(20,20,26,.94);color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.6);opacity:0;transition:opacity .25s,transform .25s}',
+    '.nm-toast.nm-in{opacity:1;transform:translate(-50%,0)}',
+    '.nm-toast button{background:rgba(255,255,255,.14);border:0;color:#fff;font:inherit;padding:.4em .8em;border-radius:6px;cursor:pointer}',
+    '.nm-toast button:hover{filter:brightness(1.3)}',
     'video.nm-mini{position:absolute!important;top:auto!important;' + side + 'bottom:5vh!important;width:' + w + 'vw!important;height:' + (w * 9 / 16).toFixed(2) + 'vw!important;z-index:6!important;background:#000;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.75);transition:all .45s ease}'
   ].join('\n');
   document.head.appendChild(css);
@@ -490,9 +639,23 @@
       if (st.shown) keepWatching();
       return;
     }
-    if (!st.shown && !st.done && pos >= at && (!st.end || pos < st.end - 2)) show(v);
+    if (!st.shown && !st.done && pos >= at && (!st.end || pos < st.end - 2)) {
+      if (sleep.mode === 'episode') { st.done = true; sleepNow(v, 'Sleep timer: paused at the end of the episode.'); }
+      else show(v);
+    }
     else if (st.shown && !st.starting && pos < at - 3) hide();   // seeked back before the credits
   }, true);
+  if (CFG.sleep) {
+    // The player rebuilds its controls for each video, so keep checking while on the player page.
+    setInterval(addSleepButton, 1000);
+    window.addEventListener('hashchange', function () {
+      closeSleepMenu();
+      if (!onPlayer() && sleep.mode) { clearInterval(sleep.timer); sleep.mode = null; updateSleepButtons(); }
+    });
+    document.addEventListener('click', function (e) {
+      if (sleep.menu && !sleep.menu.contains(e.target) && !(e.target.closest && e.target.closest('.nm-sleep-btn'))) closeSleepMenu();
+    }, true);
+  }
   if (CFG.pauseInfo) {
     // Show the panel a moment after the user pauses in the full-screen player (not for quick pauses,
     // and not for background or trailer videos elsewhere in the web app).
